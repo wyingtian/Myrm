@@ -1,0 +1,110 @@
+#!/bin/sh
+# myrm: Move the files to a trashroom first insteadong of 
+# 		a file immediately
+# usage: myrm filename1 filename2 ... 
+# 		-t take out the trash 
+# 		-l List the files in trashroom
+#		-L List the files in trashroom with detail
+# 		-p pick through the trash, enter r to recover the file
+#			to the current directory
+#			enter t to remove the file from trashroom
+#		-g get back the files followed by -g option
+# 			for example:myrm f1 f2 -g f3 f4
+#				f1 f2 is moved to trashroom and 
+#				f3 f4 is recoverd from trashroom		
+
+
+
+# echo 0 if is argument option,echo 1 if not
+isoption(){
+	case $1 in
+		-*) echo "0" ;;
+		*) echo "1" ;;
+	esac
+}
+
+# check if the trashroom directory already exsit
+# if not create one
+ls $HOME/trashroom 2>/dev/null  1>/dev/null
+if [ ! $? -eq 0 ]
+then
+	mkdir $HOME/trashroom
+fi
+
+# iterate through the input
+while test $# -gt 0 
+do	 
+# not emtpy string and it is an argument option
+	if test ! -z "$1" -a $(isoption $1) -eq 0; then
+		case $1 in
+
+		-t)	
+# get the number of files in the trahroom
+			NUM=$(ls $HOME/trashroom -l | grep -c "^-.*")
+    		echo "Ok to delete all these $NUM files?"
+    		read ANSWER1
+    		if [ $ANSWER1 = "y" ];then
+# empty the trashroom
+				rm -r $HOME/trashroom 	
+# make the empty direcotry again
+				mkdir $HOME/trashroom  
+			fi
+			shift;;
+		-l) ls $HOME/trashroom 
+			shift;;
+		-L) ls -l $HOME/trashroom 
+			shift;;
+		-g) shift 
+#  iterate through the files after -g 
+# stop when another -opton appears 
+			while [ ! -z "$1" -a $(isoption $1) -eq 1 ] 
+			do 
+				mv $HOME/trashroom/$1 .  2>/dev/null 
+# if try to get a file not in the trashroom
+				if [ $? -eq 1 ]
+				then echo " \"$1\" is not in trashroom" 
+				fi 
+				shift 
+			done
+			;;
+		-p) 
+# FILES is the list of files in the trashroom
+			FILES=$(ls $HOME/trashroom)
+# iterate through the files in trashroom
+			for F in $FILES 
+			do
+				echo "$F throw out or recover?"
+				read ANSWER3
+				case $ANSWER3 in 
+					t) rm $HOME/trashroom/$F ;;
+					r) mv $HOME/trashroom/$F . ;;
+					*) continue ;;
+				esac
+			done
+			shift ;;
+	    esac
+# remove the file
+    else 
+#check if there are a file with same name in trash room
+    	find $HOME/trashroom/$1    1>/dev/null 2>/dev/null 
+    	if [ $? -eq 0 ];then
+	    	echo "there already is a file called $1 in the trash"
+	    	echo "ok to replace it? y/n"
+	    	read ANSWER2
+	    		if [ $ANSWER2 = "y" ];then
+	    			mv $1 $HOME/trashroom   2>/dev/null 
+	    		fi
+#no same name in trash room then just move to tashroom
+    	else 
+    		mv $1 $HOME/trashroom   2>/dev/null 
+    	fi
+    	shift
+	fi
+done
+
+	
+
+
+
+
+
